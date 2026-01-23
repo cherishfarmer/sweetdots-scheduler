@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, DollarSign, Bell, X, User, Loader, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Bell, X, User, Loader, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const EmployeeScheduler = () => {
   const [employees, setEmployees] = useState([]);
@@ -8,9 +8,11 @@ const EmployeeScheduler = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [weekDates, setWeekDates] = useState([]);
+  const [weekDates, setWeekDates] = useState('');
   const [payPeriodEnd, setPayPeriodEnd] = useState(null);
   const [payDay, setPayDay] = useState(null);
+  const [availableWeeks, setAvailableWeeks] = useState([]);
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -80,10 +82,59 @@ const EmployeeScheduler = () => {
     return consolidated;
   };
 
-  const loadScheduleFromSheets = async () => {
+  const getAvailableSheets = async () => {
     const API_KEY = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
     const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-    const SHEET_NAME = process.env.REACT_APP_SHEET_NAME || 'Spring 2026 Fixed Schedule';
+
+    if (!API_KEY || !SHEET_ID) return [];
+
+    try {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const sheets = data.sheets || [];
+
+      // Filter sheets that start with "THIS WEEK", "NEXT WEEK", "NEXT 2 WEEKS", etc.
+      const scheduleSheets = sheets
+          .map(sheet => sheet.properties.title)
+          .filter(title =>
+              title.toUpperCase().includes('THIS WEEK') ||
+              title.toUpperCase().includes('NEXT') ||
+              title.toUpperCase().includes('WEEK')
+          )
+          .sort((a, b) => {
+            const aUpper = a.toUpperCase();
+            const bUpper = b.toUpperCase();
+
+            // Sort: THIS WEEK first, then NEXT WEEK, then NEXT 2 WEEKS, NEXT 3 WEEKS, etc.
+            if (aUpper.includes('THIS WEEK')) return -1;
+            if (bUpper.includes('THIS WEEK')) return 1;
+
+            // Extract numbers from "NEXT X WEEKS" or just "NEXT WEEK"
+            const aMatch = aUpper.match(/NEXT\s+(\d+)\s+WEEK/);
+            const bMatch = bUpper.match(/NEXT\s+(\d+)\s+WEEK/);
+
+            const aNum = aMatch ? parseInt(aMatch[1]) : (aUpper.includes('NEXT WEEK') ? 1 : 999);
+            const bNum = bMatch ? parseInt(bMatch[1]) : (bUpper.includes('NEXT WEEK') ? 1 : 999);
+
+            return aNum - bNum;
+          });
+
+      return scheduleSheets;
+    } catch (err) {
+      console.error('Error fetching sheets:', err);
+      return [];
+    }
+  };
+
+  const loadScheduleFromSheets = async (sheetName = null) => {
+    const API_KEY = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
+    const SHEET_ID = process.env.REACT_APP_SHEET_ID;
 
     if (!API_KEY || !SHEET_ID) {
       setError('Missing API key or Sheet ID. Please check your .env file.');
@@ -95,6 +146,16 @@ const EmployeeScheduler = () => {
       setLoading(true);
       setError(null);
 
+      // Get available weeks if not already loaded
+      if (availableWeeks.length === 0) {
+        const weeks = await getAvailableSheets();
+        setAvailableWeeks(weeks);
+        if (!sheetName && weeks.length > 0) {
+          sheetName = weeks[0]; // Default to first week
+        }
+      }
+
+      const SHEET_NAME = sheetName || availableWeeks[currentWeekIndex] || 'THIS WEEK 1/19-1/25';
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}!A1:H100?key=${API_KEY}`;
 
       const response = await fetch(url);
@@ -109,23 +170,24 @@ const EmployeeScheduler = () => {
         throw new Error('Sheet is empty or improperly formatted');
       }
 
-      const headerRow = rows[1];
-      const dayNamesFromSheet = headerRow.slice(1); // Get day names from columns C onwards
+      // Row 0: Week info
+      const weekInfo = rows[0]?.[0] || '';
+      setWeekDates(weekInfo);
 
-      // Create mapping based on actual day names in sheet
+      const headerRow = rows[1];
+      const dayNamesFromSheet = headerRow.slice(1);
+
       const dayMapping = {};
       dayNamesFromSheet.forEach((dayName, index) => {
-        // Extract just the day name (e.g., "Monday" from "January 20th, Monday")
         const dayMatch = dayName.match(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i);
         if (dayMatch) {
           dayMapping[index] = dayMatch[1];
         }
       });
 
-      setWeekDates(dayNamesFromSheet);
-
       const rawSchedule = {};
       const employeeSet = new Set();
+      const closedDays = new Set();
 
       for (let i = 2; i < rows.length; i++) {
         const row = rows[i];
@@ -138,7 +200,15 @@ const EmployeeScheduler = () => {
 
         for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
           const cellValue = row[dayIndex + 1];
-          if (!cellValue || cellValue.trim() === '') continue;
+          const dayName = dayMapping[dayIndex];
+
+          if (!cellValue || cellValue.trim() === '' || !dayName) continue;
+
+          // Check if day is closed
+          if (cellValue.toUpperCase().includes('CLOSED')) {
+            closedDays.add(dayName);
+            continue;
+          }
 
           const employeeNames = cellValue.split('/').map(name => name.trim());
 
@@ -151,7 +221,6 @@ const EmployeeScheduler = () => {
               rawSchedule[employeeName] = {};
             }
 
-            const dayName = dayMapping[dayIndex];
             if (!rawSchedule[employeeName][dayName]) {
               rawSchedule[employeeName][dayName] = [];
             }
@@ -187,6 +256,14 @@ const EmployeeScheduler = () => {
     calculatePayPeriod();
     loadScheduleFromSheets();
   }, []);
+
+  const handleWeekChange = (direction) => {
+    const newIndex = currentWeekIndex + direction;
+    if (newIndex >= 0 && newIndex < availableWeeks.length) {
+      setCurrentWeekIndex(newIndex);
+      loadScheduleFromSheets(availableWeeks[newIndex]);
+    }
+  };
 
   const calculateHours = (shifts) => {
     if (!shifts || shifts.length === 0) return 0;
@@ -359,7 +436,7 @@ const EmployeeScheduler = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Error Loading Schedule</h2>
             <p className="text-gray-600 mb-4">{error}</p>
             <button
-                onClick={loadScheduleFromSheets}
+                onClick={() => loadScheduleFromSheets()}
                 className="bg-orange-500 text-white px-6 py-2 rounded-xl hover:bg-orange-600 flex items-center gap-2 mx-auto transition"
             >
               <RefreshCw size={18} />
@@ -381,7 +458,7 @@ const EmployeeScheduler = () => {
               </div>
               <div className="flex gap-3">
                 <button
-                    onClick={loadScheduleFromSheets}
+                    onClick={() => loadScheduleFromSheets(availableWeeks[currentWeekIndex])}
                     className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-xl hover:bg-gray-200 transition"
                 >
                   <RefreshCw size={18} />
@@ -392,6 +469,42 @@ const EmployeeScheduler = () => {
                   <span className="text-sm font-medium">Updated {lastUpdated?.toLocaleDateString()}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Week Selector */}
+            <div className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl">
+              <button
+                  onClick={() => handleWeekChange(-1)}
+                  disabled={currentWeekIndex === 0}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                      currentWeekIndex === 0
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                <ChevronLeft size={20} />
+                <span className="font-medium">Previous Week</span>
+              </button>
+
+              <div className="text-center">
+                <div className="text-sm text-gray-500 font-medium">
+                  {availableWeeks[currentWeekIndex] || 'Current Week'}
+                </div>
+                <div className="text-lg font-bold text-gray-900 mt-1">{weekDates}</div>
+              </div>
+
+              <button
+                  onClick={() => handleWeekChange(1)}
+                  disabled={currentWeekIndex === availableWeeks.length - 1}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                      currentWeekIndex === availableWeeks.length - 1
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                <span className="font-medium">Next Week</span>
+                <ChevronRight size={20} />
+              </button>
             </div>
 
             <div className="bg-orange-500 text-white p-4 rounded-xl mb-4">
