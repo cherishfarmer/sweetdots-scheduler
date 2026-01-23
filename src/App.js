@@ -471,46 +471,10 @@ const EmployeeScheduler = () => {
               </div>
             </div>
 
-            {/* Week Selector */}
-            <div className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl">
-              <button
-                  onClick={() => handleWeekChange(-1)}
-                  disabled={currentWeekIndex === 0}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                      currentWeekIndex === 0
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                <ChevronLeft size={20} />
-                <span className="font-medium">Previous Week</span>
-              </button>
-
-              <div className="text-center">
-                <div className="text-sm text-gray-500 font-medium">
-                  {availableWeeks[currentWeekIndex] || 'Current Week'}
-                </div>
-                <div className="text-lg font-bold text-gray-900 mt-1">{weekDates}</div>
-              </div>
-
-              <button
-                  onClick={() => handleWeekChange(1)}
-                  disabled={currentWeekIndex === availableWeeks.length - 1}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                      currentWeekIndex === availableWeeks.length - 1
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                <span className="font-medium">Next Week</span>
-                <ChevronRight size={20} />
-              </button>
-            </div>
-
-            <div className="bg-orange-500 text-white p-4 rounded-xl mb-4">
+            <div className="bg-orange-500 text-white p-3 rounded-xl mb-4">
               <div className="flex items-center gap-2">
                 <Calendar size={20} />
-                <span className="font-medium">Sun - Thur 7am-9pm / Fri & Sat 7am-10pm</span>
+                <span className="font-medium">Sun - Thur 11am-9pm / Fri & Sat 11am-10pm</span>
               </div>
             </div>
 
@@ -539,6 +503,42 @@ const EmployeeScheduler = () => {
                 <p className="text-2xl font-bold">{getDaysUntilPayday()} days</p>
               </div>
             </div>
+
+            {/* Week Selector */}
+            <div className="flex items-center justify-between mt-4 bg-gray-50 p-3 rounded-xl">
+              <button
+                  onClick={() => handleWeekChange(-1)}
+                  disabled={currentWeekIndex === 0}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition ${
+                      currentWeekIndex === 0
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                <ChevronLeft size={18} />
+                <span className="font-medium text-sm">Previous</span>
+              </button>
+
+              <div className="text-center">
+                <div className="text-xs text-gray-500 font-medium">
+                  {availableWeeks[currentWeekIndex] || 'Current Week'}
+                </div>
+                <div className="text-sm font-bold text-gray-900">{weekDates}</div>
+              </div>
+
+              <button
+                  onClick={() => handleWeekChange(1)}
+                  disabled={currentWeekIndex === availableWeeks.length - 1}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition ${
+                      currentWeekIndex === availableWeeks.length - 1
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                <span className="font-medium text-sm">Next</span>
+                <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
@@ -546,11 +546,11 @@ const EmployeeScheduler = () => {
               <table className="w-full">
                 <thead>
                 <tr className="bg-orange-500 text-white">
-                  <th className="px-6 py-4 text-left font-semibold">Employee</th>
+                  <th className="px-4 py-3 text-left font-semibold text-sm">Employee</th>
                   {days.map(day => (
-                      <th key={day} className="px-6 py-4 text-center font-semibold min-w-[160px]">{day}</th>
+                      <th key={day} className="px-3 py-3 text-center font-semibold text-sm min-w-[120px]">{day.substring(0, 3)}</th>
                   ))}
-                  <th className="px-6 py-4 text-center font-semibold">Total Hours</th>
+                  <th className="px-4 py-3 text-center font-semibold text-sm">Hours</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -560,32 +560,32 @@ const EmployeeScheduler = () => {
                         className={`border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                         onClick={() => setSelectedEmployee(employee)}
                     >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{employee.photo}</span>
-                          <span className="font-medium text-gray-900">{employee.name}</span>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{employee.photo}</span>
+                          <span className="font-medium text-gray-900 text-sm">{employee.name}</span>
                         </div>
                       </td>
                       {days.map(day => {
                         const shifts = schedule[employee.name]?.[day];
                         return (
-                            <td key={day} className="px-6 py-4 text-center">
+                            <td key={day} className="px-3 py-3 text-center">
                               {shifts && shifts.length > 0 ? (
                                   <div className="space-y-1">
                                     {shifts.map((shift, idx) => (
-                                        <div key={idx} className="bg-orange-100 text-orange-700 px-3 py-2 rounded-lg text-sm font-medium border border-orange-200">
+                                        <div key={idx} className="bg-orange-100 text-orange-700 px-2 py-1 rounded-lg text-xs font-medium border border-orange-200">
                                           {formatShift(shift)}
                                         </div>
                                     ))}
                                   </div>
                               ) : (
-                                  <span className="text-gray-400 text-sm">OFF</span>
+                                  <span className="text-gray-400 text-xs">OFF</span>
                               )}
                             </td>
                         );
                       })}
-                      <td className="px-6 py-4 text-center">
-                      <span className="bg-orange-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                      <td className="px-4 py-3 text-center">
+                      <span className="bg-orange-500 text-white px-3 py-1 rounded-lg font-bold text-xs">
                         {getEmployeeWeeklyHours(employee.name).toFixed(1)}h
                       </span>
                       </td>
