@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, DollarSign, Bell, X, User, Phone, Mail, Loader, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Bell, X, User, Loader, RefreshCw } from 'lucide-react';
 
 const EmployeeScheduler = () => {
   const [employees, setEmployees] = useState([]);
@@ -9,22 +9,44 @@ const EmployeeScheduler = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [weekDates, setWeekDates] = useState([]);
+  const [payPeriodEnd, setPayPeriodEnd] = useState(null);
+  const [payDay, setPayDay] = useState(null);
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  // Parse time slot to get start and end times
+  const calculatePayPeriod = () => {
+    const referencePeriodEnd = new Date(2026, 0, 18);
+    referencePeriodEnd.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const daysSinceReference = Math.floor((today - referencePeriodEnd) / (1000 * 60 * 60 * 24));
+    const periodsPassed = Math.floor(daysSinceReference / 14);
+
+    let nextPeriodEnd = new Date(referencePeriodEnd);
+
+    if (daysSinceReference >= 0) {
+      nextPeriodEnd.setDate(referencePeriodEnd.getDate() + (periodsPassed + 1) * 14);
+    }
+
+    const payDay = new Date(nextPeriodEnd);
+    payDay.setDate(nextPeriodEnd.getDate() + 3);
+
+    setPayPeriodEnd(nextPeriodEnd);
+    setPayDay(payDay);
+  };
+
   const parseTimeSlot = (timeSlot) => {
     const [start, end] = timeSlot.split('-');
     return { start, end };
   };
 
-  // Convert time string to minutes for comparison
   const timeToMinutes = (timeStr) => {
     const [hours, minutes] = timeStr.split(':').map(Number);
     return hours * 60 + minutes;
   };
 
-  // Consolidate consecutive time slots for same employee
   const consolidateShifts = (rawSchedule) => {
     const consolidated = {};
 
@@ -35,7 +57,6 @@ const EmployeeScheduler = () => {
         const slots = rawSchedule[employeeName][day];
         if (!slots || slots.length === 0) return;
 
-        // Sort slots by start time
         slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
 
         const merged = [];
@@ -43,7 +64,6 @@ const EmployeeScheduler = () => {
 
         for (let i = 1; i < slots.length; i++) {
           const slot = slots[i];
-          // If current end time matches next start time, merge them
           if (current.end === slot.start) {
             current.end = slot.end;
           } else {
@@ -60,7 +80,6 @@ const EmployeeScheduler = () => {
     return consolidated;
   };
 
-  // Load data from Google Sheets
   const loadScheduleFromSheets = async () => {
     const API_KEY = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
     const SHEET_ID = process.env.REACT_APP_SHEET_ID;
@@ -90,15 +109,21 @@ const EmployeeScheduler = () => {
         throw new Error('Sheet is empty or improperly formatted');
       }
 
-      // Row 0: Week info (ignored for now)
-      // Row 1: "Day" header and day names
       const headerRow = rows[1];
-      const dayNames = headerRow.slice(2); // Skip "Day" and "Time" columns
+      const dayNamesFromSheet = headerRow.slice(1); // Get day names from columns C onwards
 
-      // Extract dates from header if available
-      setWeekDates(dayNames);
+      // Create mapping based on actual day names in sheet
+      const dayMapping = {};
+      dayNamesFromSheet.forEach((dayName, index) => {
+        // Extract just the day name (e.g., "Monday" from "January 20th, Monday")
+        const dayMatch = dayName.match(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i);
+        if (dayMatch) {
+          dayMapping[index] = dayMatch[1];
+        }
+      });
 
-      // Parse schedule data starting from row 2
+      setWeekDates(dayNamesFromSheet);
+
       const rawSchedule = {};
       const employeeSet = new Set();
 
@@ -106,17 +131,15 @@ const EmployeeScheduler = () => {
         const row = rows[i];
         if (!row || row.length < 2) continue;
 
-        const timeSlot = row[0]; // e.g., "09:00-09:30"
+        const timeSlot = row[0];
         if (!timeSlot || !timeSlot.includes('-')) continue;
 
         const { start, end } = parseTimeSlot(timeSlot);
 
-        // Process each day column (starting from column 2)
-        for (let dayIndex = 0; dayIndex < dayNames.length; dayIndex++) {
-          const cellValue = row[dayIndex + 2]; // +2 to skip "Day" and "Time" columns
+        for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+          const cellValue = row[dayIndex + 1];
           if (!cellValue || cellValue.trim() === '') continue;
 
-          // Handle multiple employees in same cell (e.g., "Sophia/Jacob")
           const employeeNames = cellValue.split('/').map(name => name.trim());
 
           employeeNames.forEach(employeeName => {
@@ -128,7 +151,7 @@ const EmployeeScheduler = () => {
               rawSchedule[employeeName] = {};
             }
 
-            const dayName = days[dayIndex];
+            const dayName = dayMapping[dayIndex];
             if (!rawSchedule[employeeName][dayName]) {
               rawSchedule[employeeName][dayName] = [];
             }
@@ -138,14 +161,12 @@ const EmployeeScheduler = () => {
         }
       }
 
-      // Consolidate consecutive time slots
       const consolidatedSchedule = consolidateShifts(rawSchedule);
 
-      // Create employee list (you can add contact info later)
       const employeeList = Array.from(employeeSet).sort().map((name, index) => ({
         id: index + 1,
         name: name,
-        phone: '555-0100', // Placeholder
+        phone: '555-0100',
         email: `${name.toLowerCase().replace(' ', '.')}@email.com`,
         photo: '👤'
       }));
@@ -163,6 +184,7 @@ const EmployeeScheduler = () => {
   };
 
   useEffect(() => {
+    calculatePayPeriod();
     loadScheduleFromSheets();
   }, []);
 
@@ -201,6 +223,14 @@ const EmployeeScheduler = () => {
     return `${formatTime(shift.start)} - ${formatTime(shift.end)}`;
   };
 
+  const getDaysUntilPayday = () => {
+    if (!payDay) return 0;
+    const today = new Date();
+    const diffTime = payDay - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   const EmployeeProfile = ({ employee }) => {
     const [hourlyRate, setHourlyRate] = useState('');
     const [tipsPerHour, setTipsPerHour] = useState('');
@@ -214,8 +244,8 @@ const EmployeeScheduler = () => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-orange-600 to-orange-700 p-6 text-white rounded-t-lg">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-orange-500 p-6 text-white rounded-t-2xl">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-4">
                   <div className="text-6xl bg-white bg-opacity-20 rounded-full w-20 h-20 flex items-center justify-center">
@@ -226,7 +256,7 @@ const EmployeeScheduler = () => {
                     <p className="text-orange-100 mt-1">{weeklyHours.toFixed(1)} hours this week</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedEmployee(null)} className="text-white hover:bg-white hover:bg-opacity-20 rounded p-2">
+                <button onClick={() => setSelectedEmployee(null)} className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition">
                   <X size={24} />
                 </button>
               </div>
@@ -235,17 +265,17 @@ const EmployeeScheduler = () => {
             <div className="p-6">
               <div className="mb-6">
                 <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <Calendar size={18} className="text-orange-600" />
+                  <Calendar size={18} className="text-orange-500" />
                   This Week's Shifts
                 </h3>
                 <div className="grid grid-cols-1 gap-2">
                   {days.map(day => {
                     const shifts = employeeShifts[day];
                     return shifts && shifts.length > 0 ? (
-                        <div key={day} className="bg-orange-50 p-3 rounded-lg">
+                        <div key={day} className="bg-orange-50 p-3 rounded-xl border border-orange-100">
                           <div className="font-medium text-gray-800 mb-1">{day}</div>
                           {shifts.map((shift, idx) => (
-                              <div key={idx} className="text-orange-700 flex items-center gap-1 ml-4">
+                              <div key={idx} className="text-orange-600 flex items-center gap-1 ml-4">
                                 <Clock size={16} />
                                 {formatShift(shift)}
                               </div>
@@ -261,7 +291,7 @@ const EmployeeScheduler = () => {
 
               <div className="border-t pt-6">
                 <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <DollarSign size={18} className="text-orange-600" />
+                  <DollarSign size={18} className="text-orange-500" />
                   Pay Calculator
                 </h3>
                 <div className="space-y-4">
@@ -272,7 +302,7 @@ const EmployeeScheduler = () => {
                         value={hourlyRate}
                         onChange={(e) => setHourlyRate(e.target.value)}
                         placeholder="15.00"
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -282,12 +312,12 @@ const EmployeeScheduler = () => {
                         value={tipsPerHour}
                         onChange={(e) => setTipsPerHour(e.target.value)}
                         placeholder="10.00"
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                     />
                   </div>
 
                   {(hourlyRate || tipsPerHour) && (
-                      <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg space-y-2">
+                      <div className="bg-orange-50 p-4 rounded-xl space-y-2 border border-orange-100">
                         <div className="flex justify-between text-gray-700">
                           <span>Base Pay:</span>
                           <span className="font-semibold">${estimatedPay.toFixed(2)}</span>
@@ -296,7 +326,7 @@ const EmployeeScheduler = () => {
                           <span>Estimated Tips:</span>
                           <span className="font-semibold">${estimatedTips.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-lg font-bold text-orange-700 border-t border-orange-200 pt-2">
+                        <div className="flex justify-between text-lg font-bold text-orange-600 border-t border-orange-200 pt-2">
                           <span>Total Estimated:</span>
                           <span>${totalEarnings.toFixed(2)}</span>
                         </div>
@@ -312,10 +342,10 @@ const EmployeeScheduler = () => {
 
   if (loading) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <Loader className="animate-spin text-orange-600 mx-auto mb-4" size={48} />
-            <p className="text-gray-600 text-lg">Loading schedule from Google Sheets...</p>
+            <Loader className="animate-spin text-orange-500 mx-auto mb-4" size={48} />
+            <p className="text-gray-600 text-lg">Loading schedule...</p>
           </div>
         </div>
     );
@@ -323,14 +353,14 @@ const EmployeeScheduler = () => {
 
   if (error) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center p-6">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
-            <div className="text-red-600 text-6xl mb-4">⚠️</div>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md">
+            <div className="text-red-500 text-6xl mb-4">⚠️</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Error Loading Schedule</h2>
             <p className="text-gray-600 mb-4">{error}</p>
             <button
                 onClick={loadScheduleFromSheets}
-                className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 flex items-center gap-2 mx-auto"
+                className="bg-orange-500 text-white px-6 py-2 rounded-xl hover:bg-orange-600 flex items-center gap-2 mx-auto transition"
             >
               <RefreshCw size={18} />
               Try Again
@@ -341,39 +371,68 @@ const EmployeeScheduler = () => {
   }
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
+      <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto p-6">
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h1 className="text-3xl font-bold text-gray-800">Employee Schedule</h1>
-              <div className="flex gap-4">
+          <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Sweet Dots Schedule</h1>
+                <p className="text-gray-500 text-sm mt-1">Weekly employee schedule</p>
+              </div>
+              <div className="flex gap-3">
                 <button
                     onClick={loadScheduleFromSheets}
-                    className="flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-lg hover:bg-orange-200"
+                    className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-xl hover:bg-gray-200 transition"
                 >
                   <RefreshCw size={18} />
-                  <span className="text-sm">Refresh</span>
+                  <span className="text-sm font-medium">Refresh</span>
                 </button>
-                <div className="flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-lg">
+                <div className="flex items-center gap-2 bg-orange-50 text-orange-600 px-4 py-2 rounded-xl border border-orange-100">
                   <Bell size={18} />
-                  <span className="text-sm">Last updated: {lastUpdated?.toLocaleString()}</span>
+                  <span className="text-sm font-medium">Updated {lastUpdated?.toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4 rounded-lg">
+            <div className="bg-orange-500 text-white p-4 rounded-xl mb-4">
               <div className="flex items-center gap-2">
                 <Calendar size={20} />
-                <span className="font-semibold text-lg">Sun - Thur 7am-9pm / Fri & Sat 7am-10pm</span>
+                <span className="font-medium">Sun - Thur 7am-9pm / Fri & Sat 7am-10pm</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar size={20} />
+                  <span className="font-semibold text-sm">Pay Period Ends</span>
+                </div>
+                <p className="text-2xl font-bold">{payPeriodEnd?.toLocaleDateString()}</p>
+              </div>
+
+              <div className="bg-green-50 text-green-700 p-4 rounded-xl border border-green-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign size={20} />
+                  <span className="font-semibold text-sm">Pay Day</span>
+                </div>
+                <p className="text-2xl font-bold">{payDay?.toLocaleDateString()}</p>
+              </div>
+
+              <div className="bg-blue-50 text-blue-700 p-4 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock size={20} />
+                  <span className="font-semibold text-sm">Days Until Payday</span>
+                </div>
+                <p className="text-2xl font-bold">{getDaysUntilPayday()} days</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                <tr className="bg-gradient-to-r from-orange-600 to-orange-700 text-white">
+                <tr className="bg-orange-500 text-white">
                   <th className="px-6 py-4 text-left font-semibold">Employee</th>
                   {days.map(day => (
                       <th key={day} className="px-6 py-4 text-center font-semibold min-w-[160px]">{day}</th>
@@ -385,13 +444,13 @@ const EmployeeScheduler = () => {
                 {employees.map((employee, idx) => (
                     <tr
                         key={employee.id}
-                        className={`border-b hover:bg-orange-50 cursor-pointer transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-orange-25'}`}
+                        className={`border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                         onClick={() => setSelectedEmployee(employee)}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{employee.photo}</span>
-                          <span className="font-medium text-gray-800">{employee.name}</span>
+                          <span className="font-medium text-gray-900">{employee.name}</span>
                         </div>
                       </td>
                       {days.map(day => {
@@ -401,19 +460,19 @@ const EmployeeScheduler = () => {
                               {shifts && shifts.length > 0 ? (
                                   <div className="space-y-1">
                                     {shifts.map((shift, idx) => (
-                                        <div key={idx} className="bg-orange-100 text-orange-800 px-3 py-2 rounded-lg text-sm font-medium">
+                                        <div key={idx} className="bg-orange-100 text-orange-700 px-3 py-2 rounded-lg text-sm font-medium border border-orange-200">
                                           {formatShift(shift)}
                                         </div>
                                     ))}
                                   </div>
                               ) : (
-                                  <span className="text-gray-400">OFF</span>
+                                  <span className="text-gray-400 text-sm">OFF</span>
                               )}
                             </td>
                         );
                       })}
                       <td className="px-6 py-4 text-center">
-                      <span className="bg-gradient-to-r from-orange-600 to-amber-600 text-white px-4 py-2 rounded-lg font-bold">
+                      <span className="bg-orange-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
                         {getEmployeeWeeklyHours(employee.name).toFixed(1)}h
                       </span>
                       </td>
@@ -424,9 +483,9 @@ const EmployeeScheduler = () => {
             </div>
           </div>
 
-          <div className="mt-6 bg-orange-100 border-l-4 border-orange-600 p-4 rounded">
-            <p className="text-orange-800">
-              <strong>Tip:</strong> Click on any employee row to view their detailed schedule and calculate their estimated pay for the week!
+          <div className="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+            <p className="text-blue-800 text-sm">
+              <strong>💡 Tip:</strong> Click on any employee row to view their detailed schedule and calculate their estimated pay for the week!
             </p>
           </div>
         </div>
