@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, DollarSign, Bell, X, User, Loader, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Bell, X, User, Loader, RefreshCw, ChevronLeft, ChevronRight, Phone, Mail, Lock } from 'lucide-react';
 
 const EmployeeScheduler = () => {
   const [employees, setEmployees] = useState([]);
@@ -15,6 +15,28 @@ const EmployeeScheduler = () => {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  // Add these state variables
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+// Add this login handler
+  const handleLogin = (e) => {
+    e.preventDefault();
+    const correctUsername = 'SweetDotsMusicCity';
+    const correctPassword = '112921';
+
+    if (username === correctUsername && password === correctPassword) {
+      setIsAuthenticated(true);
+      setLoginError('');
+      calculatePayPeriod();
+      loadScheduleFromSheets();
+    } else {
+      setLoginError('Invalid username or password');
+    }
+  };
 
   const calculatePayPeriod = () => {
     const referencePeriodEnd = new Date(2026, 0, 18);
@@ -132,9 +154,52 @@ const EmployeeScheduler = () => {
     }
   };
 
+  const loadContactsFromSheet = async () => {
+    const API_KEY = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
+    const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+    const CONTACTS_TAB = 'Contacts'; // Name of your contacts tab
+
+    try {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(CONTACTS_TAB)}!A1:D100?key=${API_KEY}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        console.warn('Contacts tab not found');
+        return {};
+      }
+
+      const data = await response.json();
+      const rows = data.values;
+
+      if (!rows || rows.length < 2) return {};
+
+      const contacts = {};
+      // Row 0 is header: Name | Phone | Email | Availability
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length < 2) continue;
+
+        const name = row[0]?.trim();
+        const phone = row[1]?.trim() || '555-0100';
+        const email = row[2]?.trim() || `${name.toLowerCase().replace(' ', '.')}@email.com`;
+        const availability = row[3]?.trim() || 'Not specified';
+
+        if (name) {
+          contacts[name] = { phone, email, availability };
+        }
+      }
+
+      return contacts;
+    } catch (err) {
+      console.error('Error loading contacts:', err);
+      return {};
+    }
+  };
+
   const loadScheduleFromSheets = async (sheetName = null) => {
     const API_KEY = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
     const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+    const contacts = await loadContactsFromSheet();
 
     if (!API_KEY || !SHEET_ID) {
       setError('Missing API key or Sheet ID. Please check your .env file.');
@@ -232,13 +297,32 @@ const EmployeeScheduler = () => {
 
       const consolidatedSchedule = consolidateShifts(rawSchedule);
 
-      const employeeList = Array.from(employeeSet).sort().map((name, index) => ({
-        id: index + 1,
-        name: name,
-        phone: '555-0100',
-        email: `${name.toLowerCase().replace(' ', '.')}@email.com`,
-        photo: '👤'
-      }));
+      const employeeList = Array.from(employeeSet)
+          .sort()
+          .map((firstName, index) => {
+            // Find the contact whose full name starts with this first name
+            const contactEntry = Object.entries(contacts).find(
+                ([fullName, info]) =>
+                    fullName.toLowerCase().startsWith(firstName.toLowerCase())
+            );
+
+            const [fullName, contactInfo] = contactEntry || [firstName, {}];
+
+            return {
+              id: index + 1,
+              firstName,           // keep this for schedule lookup
+              fullName,            // use this for profile display
+              phone: contactInfo?.phone || '555-0100',
+              email:
+                  contactInfo?.email ||
+                  `${firstName.toLowerCase().replace(' ', '.')}@email.com`,
+              availability: contactInfo?.availability || 'Not specified',
+              photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  fullName
+              )}&background=f97316&color=fff&size=128`,
+            };
+          });
+
 
       setEmployees(employeeList);
       setSchedule(consolidatedSchedule);
@@ -312,8 +396,8 @@ const EmployeeScheduler = () => {
     const [hourlyRate, setHourlyRate] = useState('');
     const [tipsPerHour, setTipsPerHour] = useState('');
 
-    const weeklyHours = getEmployeeWeeklyHours(employee.name);
-    const employeeShifts = schedule[employee.name] || {};
+    const weeklyHours = getEmployeeWeeklyHours(employee.firstName);
+    const employeeShifts = schedule[employee.firstName] || {};
 
     const estimatedPay = hourlyRate ? weeklyHours * parseFloat(hourlyRate) : 0;
     const estimatedTips = tipsPerHour ? weeklyHours * parseFloat(tipsPerHour) : 0;
@@ -325,11 +409,17 @@ const EmployeeScheduler = () => {
             <div className="bg-orange-500 p-6 text-white rounded-t-2xl">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-4">
-                  <div className="text-6xl bg-white bg-opacity-20 rounded-full w-20 h-20 flex items-center justify-center">
-                    {employee.photo}
+                  <div
+                      className="text-6xl bg-white bg-opacity-20 rounded-full w-20 h-20 flex items-center justify-center">
+                    <img
+                        src={employee.photo}
+                        alt={employee.fullName}
+                        className="w-10 h-10 rounded-full"
+                    />
+
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">{employee.name}</h2>
+                    <h2 className="text-2xl font-bold">{employee.fullName}</h2>
                     <p className="text-orange-100 mt-1">{weeklyHours.toFixed(1)} hours this week</p>
                   </div>
                 </div>
@@ -340,6 +430,26 @@ const EmployeeScheduler = () => {
             </div>
 
             <div className="p-6">
+              <div className="mb-6">
+                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <User size={18} className="text-orange-500" />
+                  Contact Information
+                </h3>
+                <div className="bg-orange-50 rounded-xl p-4 space-y-2 border border-orange-100">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Phone size={16} className="text-orange-600" />
+                    <span>{employee.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Mail size={16} className="text-orange-600" />
+                    <span>{employee.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Calendar size={16} className="text-orange-600" />
+                    <span><strong>Availability:</strong> {employee.availability}</span>
+                  </div>
+                </div>
+              </div>
               <div className="mb-6">
                 <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                   <Calendar size={18} className="text-orange-500" />
@@ -378,7 +488,7 @@ const EmployeeScheduler = () => {
                         type="number"
                         value={hourlyRate}
                         onChange={(e) => setHourlyRate(e.target.value)}
-                        placeholder="15.00"
+                        placeholder="10.00"
                         className="w-full border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                     />
                   </div>
@@ -388,7 +498,7 @@ const EmployeeScheduler = () => {
                         type="number"
                         value={tipsPerHour}
                         onChange={(e) => setTipsPerHour(e.target.value)}
-                        placeholder="10.00"
+                        placeholder="2.00"
                         className="w-full border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                     />
                   </div>
@@ -446,6 +556,62 @@ const EmployeeScheduler = () => {
         </div>
     );
   }
+
+  if (!isAuthenticated) {
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-orange-100 via-amber-50 to-yellow-100 flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div className="text-center mb-8">
+              <div className="bg-orange-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock size={40} className="text-white" />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Sweet Dots Schedule</h1>
+              <p className="text-gray-600">Employee access only</p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                    placeholder="Enter username"
+                    required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                    placeholder="Enter password"
+                    required
+                />
+              </div>
+
+              {loginError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                    {loginError}
+                  </div>
+              )}
+
+              <button
+                  type="submit"
+                  className="w-full bg-orange-500 text-white py-3 rounded-xl hover:bg-orange-600 transition font-semibold"
+              >
+                Sign In
+              </button>
+            </form>
+          </div>
+        </div>
+    );
+  }
+
 
   return (
       <div className="min-h-screen bg-gray-50">
@@ -562,18 +728,26 @@ const EmployeeScheduler = () => {
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xl">{employee.photo}</span>
-                          <span className="font-medium text-gray-900 text-sm">{employee.name}</span>
+                          <img
+                              src={employee.photo}
+                              alt={employee.firstName}
+                              className="w-10 h-10 rounded-full"
+                          />
+
+                          <span className="font-medium text-gray-900 text-sm">{employee.firstName}</span>
                         </div>
                       </td>
                       {days.map(day => {
-                        const shifts = schedule[employee.name]?.[day];
+                        const shifts = schedule[employee.firstName]?.[day]; // <-- use firstName here
                         return (
                             <td key={day} className="px-3 py-3 text-center">
                               {shifts && shifts.length > 0 ? (
                                   <div className="space-y-1">
                                     {shifts.map((shift, idx) => (
-                                        <div key={idx} className="bg-orange-100 text-orange-700 px-2 py-1 rounded-lg text-xs font-medium border border-orange-200">
+                                        <div
+                                            key={idx}
+                                            className="bg-orange-100 text-orange-700 px-2 py-1 rounded-lg text-xs font-medium border border-orange-200"
+                                        >
                                           {formatShift(shift)}
                                         </div>
                                     ))}
@@ -584,9 +758,10 @@ const EmployeeScheduler = () => {
                             </td>
                         );
                       })}
+
                       <td className="px-4 py-3 text-center">
                       <span className="bg-orange-500 text-white px-3 py-1 rounded-lg font-bold text-xs">
-                        {getEmployeeWeeklyHours(employee.name).toFixed(1)}h
+                        {getEmployeeWeeklyHours(employee.firstName).toFixed(1)}h
                       </span>
                       </td>
                     </tr>
@@ -594,12 +769,6 @@ const EmployeeScheduler = () => {
                 </tbody>
               </table>
             </div>
-          </div>
-
-          <div className="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
-            <p className="text-blue-800 text-sm">
-              <strong>💡 Tip:</strong> Click on any employee row to view their detailed schedule and calculate their estimated pay for the week!
-            </p>
           </div>
         </div>
 
