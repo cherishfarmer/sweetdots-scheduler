@@ -431,27 +431,27 @@ const EmployeeScheduler = () => {
 
             <div className="p-6">
               <div className="mb-6">
-                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <h3 className="font-semibold text-[#2c1612] mb-3 flex items-center gap-2">
                   <User size={18} className="text-orange-500" />
                   Contact Information
                 </h3>
                 <div className="bg-orange-50 rounded-xl p-4 space-y-2 border border-orange-100">
-                  <div className="flex items-center gap-2 text-gray-700">
+                  <div className="flex items-center gap-2 text-[#2c1612]">
                     <Phone size={16} className="text-orange-600" />
                     <span>{employee.phone}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-700">
+                  <div className="flex items-center gap-2 text-[#2c1612]">
                     <Mail size={16} className="text-orange-600" />
                     <span>{employee.email}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-700">
+                  <div className="flex items-center gap-2 text-[#2c1612]">
                     <Calendar size={16} className="text-orange-600" />
                     <span><strong>Availability:</strong> {employee.availability}</span>
                   </div>
                 </div>
               </div>
               <div className="mb-6">
-                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <h3 className="font-semibold text-[#2c1612] mb-3 flex items-center gap-2">
                   <Calendar size={18} className="text-orange-500" />
                   This Week's Shifts
                 </h3>
@@ -460,7 +460,7 @@ const EmployeeScheduler = () => {
                     const shifts = employeeShifts[day];
                     return shifts && shifts.length > 0 ? (
                         <div key={day} className="bg-orange-50 p-3 rounded-xl border border-orange-100">
-                          <div className="font-medium text-gray-800 mb-1">{day}</div>
+                          <div className="font-medium text-[#2c1612] mb-1">{day}</div>
                           {shifts.map((shift, idx) => (
                               <div key={idx} className="text-orange-600 flex items-center gap-1 ml-4">
                                 <Clock size={16} />
@@ -471,19 +471,19 @@ const EmployeeScheduler = () => {
                     ) : null;
                   })}
                   {Object.keys(employeeShifts).length === 0 && (
-                      <p className="text-gray-500 text-center py-4">No shifts scheduled this week</p>
+                      <p className="text-[#2c1612]/80 text-center py-4">No shifts scheduled this week</p>
                   )}
                 </div>
               </div>
 
               <div className="border-t pt-6">
-                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <h3 className="font-semibold text-[#2c1612] mb-3 flex items-center gap-2">
                   <DollarSign size={18} className="text-orange-500" />
                   Pay Calculator
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate ($)</label>
+                    <label className="block text-sm font-medium text-[#2c1612] mb-1">Hourly Rate ($)</label>
                     <input
                         type="number"
                         value={hourlyRate}
@@ -493,7 +493,7 @@ const EmployeeScheduler = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Tips Per Hour ($)</label>
+                    <label className="block text-sm font-medium text-[#2c1612] mb-1">Estimated Tips Per Hour ($)</label>
                     <input
                         type="number"
                         value={tipsPerHour}
@@ -505,11 +505,11 @@ const EmployeeScheduler = () => {
 
                   {(hourlyRate || tipsPerHour) && (
                       <div className="bg-orange-50 p-4 rounded-xl space-y-2 border border-orange-100">
-                        <div className="flex justify-between text-gray-700">
+                        <div className="flex justify-between text-[#2c1612]">
                           <span>Base Pay:</span>
                           <span className="font-semibold">${estimatedPay.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-gray-700">
+                        <div className="flex justify-between text-[#2c1612]">
                           <span>Estimated Tips:</span>
                           <span className="font-semibold">${estimatedTips.toFixed(2)}</span>
                         </div>
@@ -532,7 +532,7 @@ const EmployeeScheduler = () => {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <Loader className="animate-spin text-orange-500 mx-auto mb-4" size={48} />
-            <p className="text-gray-600 text-lg">Loading schedule...</p>
+            <p className="text-[#2c1612]/70 text-lg">Loading schedule...</p>
           </div>
         </div>
     );
@@ -543,8 +543,8 @@ const EmployeeScheduler = () => {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
           <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md">
             <div className="text-red-500 text-6xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Error Loading Schedule</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <h2 className="text-2xl font-bold text-[#2c1612] mb-2">Error Loading Schedule</h2>
+            <p className="text-[#2c1612]/70 mb-4">{error}</p>
             <button
                 onClick={() => loadScheduleFromSheets()}
                 className="bg-orange-500 text-white px-6 py-2 rounded-xl hover:bg-orange-600 flex items-center gap-2 mx-auto transition"
@@ -562,16 +562,22 @@ const EmployeeScheduler = () => {
         <div className="min-h-screen bg-gradient-to-br from-orange-100 via-amber-50 to-yellow-100 flex items-center justify-center p-6">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
             <div className="text-center mb-8">
-              <div className="bg-orange-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Lock size={40} className="text-white" />
+              <div className="bg-orange-500 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-4">
+                <img
+                    src="/sweetdotsfavicon-removebg-preview.png"
+                    alt="Sweet Dots Logo"
+                    className="w-30 h-30 object-cover"
+                />
               </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Sweet Dots Schedule</h1>
-              <p className="text-gray-600">Employee access only</p>
+
+
+              <h1 className="text-3xl font-bold text-[#2c1612] mb-2">Sweet Dots Schedule</h1>
+              <p className="text-[#2c1612]/70">Employee access only</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <label className="block text-sm font-medium text-[#2c1612] mb-1">Username</label>
                 <input
                     type="text"
                     value={username}
@@ -583,7 +589,7 @@ const EmployeeScheduler = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <label className="block text-sm font-medium text-[#2c1612] mb-1">Password</label>
                 <input
                     type="password"
                     value={password}
@@ -619,19 +625,20 @@ const EmployeeScheduler = () => {
           <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Sweet Dots Schedule</h1>
-                <p className="text-gray-500 text-sm mt-1">Weekly employee schedule</p>
+                <h1 className="text-3xl font-bold text-[#2c1612]">Sweet Dots Schedule</h1>
+                <p className="text-[#2c1612]/80 text-sm mt-1">Weekly employee schedule</p>
               </div>
               <div className="flex gap-3">
                 <button
                     onClick={() => loadScheduleFromSheets(availableWeeks[currentWeekIndex])}
-                    className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-xl hover:bg-gray-200 transition"
+                    className="flex items-center gap-2 bg-gray-100 text-[#2c1612] px-4 py-2 rounded-xl hover:bg-gray-200 transition"
                 >
-                  <RefreshCw size={18} />
+                  <RefreshCw size={18}/>
                   <span className="text-sm font-medium">Refresh</span>
                 </button>
-                <div className="flex items-center gap-2 bg-orange-50 text-orange-600 px-4 py-2 rounded-xl border border-orange-100">
-                  <Bell size={18} />
+                <div
+                    className="flex items-center gap-2 bg-orange-50 text-orange-600 px-4 py-2 rounded-xl border border-orange-100">
+                  <Bell size={18}/>
                   <span className="text-sm font-medium">Updated {lastUpdated?.toLocaleDateString()}</span>
                 </div>
               </div>
@@ -639,7 +646,7 @@ const EmployeeScheduler = () => {
 
             <div className="bg-orange-500 text-white p-3 rounded-xl mb-4">
               <div className="flex items-center gap-2">
-                <Calendar size={20} />
+                <Calendar size={20}/>
                 <span className="font-medium">Sun - Thur 11am-9pm / Fri & Sat 11am-10pm</span>
               </div>
             </div>
@@ -647,7 +654,7 @@ const EmployeeScheduler = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100">
                 <div className="flex items-center gap-2 mb-2">
-                  <Calendar size={20} />
+                  <Calendar size={20}/>
                   <span className="font-semibold text-sm">Pay Period Ends</span>
                 </div>
                 <p className="text-2xl font-bold">{payPeriodEnd?.toLocaleDateString()}</p>
@@ -655,7 +662,7 @@ const EmployeeScheduler = () => {
 
               <div className="bg-green-50 text-green-700 p-4 rounded-xl border border-green-100">
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign size={20} />
+                  <DollarSign size={20}/>
                   <span className="font-semibold text-sm">Pay Day</span>
                 </div>
                 <p className="text-2xl font-bold">{payDay?.toLocaleDateString()}</p>
@@ -663,7 +670,7 @@ const EmployeeScheduler = () => {
 
               <div className="bg-blue-50 text-blue-700 p-4 rounded-xl border border-blue-100">
                 <div className="flex items-center gap-2 mb-2">
-                  <Clock size={20} />
+                  <Clock size={20}/>
                   <span className="font-semibold text-sm">Days Until Payday</span>
                 </div>
                 <p className="text-2xl font-bold">{getDaysUntilPayday()} days</p>
@@ -677,19 +684,19 @@ const EmployeeScheduler = () => {
                   disabled={currentWeekIndex === 0}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition ${
                       currentWeekIndex === 0
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-200'
+                          ? 'text-[#2c1612]/35 cursor-not-allowed'
+                          : 'text-[#2c1612] hover:bg-gray-200'
                   }`}
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={18}/>
                 <span className="font-medium text-sm">Previous</span>
               </button>
 
               <div className="text-center">
-                <div className="text-xs text-gray-500 font-medium">
+                <div className="text-xs text-[#2c1612]/80 font-medium">
                   {availableWeeks[currentWeekIndex] || 'Current Week'}
                 </div>
-                <div className="text-sm font-bold text-gray-900">{weekDates}</div>
+                <div className="text-sm font-bold text-[#2c1612]">{weekDates}</div>
               </div>
 
               <button
@@ -697,12 +704,12 @@ const EmployeeScheduler = () => {
                   disabled={currentWeekIndex === availableWeeks.length - 1}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition ${
                       currentWeekIndex === availableWeeks.length - 1
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-200'
+                          ? 'text-[#2c1612]/35 cursor-not-allowed'
+                          : 'text-[#2c1612] hover:bg-gray-200'
                   }`}
               >
                 <span className="font-medium text-sm">Next</span>
-                <ChevronRight size={18} />
+                <ChevronRight size={18}/>
               </button>
             </div>
           </div>
@@ -714,7 +721,8 @@ const EmployeeScheduler = () => {
                 <tr className="bg-orange-500 text-white">
                   <th className="px-4 py-3 text-left font-semibold text-sm">Employee</th>
                   {days.map(day => (
-                      <th key={day} className="px-3 py-3 text-center font-semibold text-sm min-w-[120px]">{day.substring(0, 3)}</th>
+                      <th key={day}
+                          className="px-3 py-3 text-center font-semibold text-sm min-w-[120px]">{day.substring(0, 3)}</th>
                   ))}
                   <th className="px-4 py-3 text-center font-semibold text-sm">Hours</th>
                 </tr>
@@ -734,7 +742,7 @@ const EmployeeScheduler = () => {
                               className="w-10 h-10 rounded-full"
                           />
 
-                          <span className="font-medium text-gray-900 text-sm">{employee.firstName}</span>
+                          <span className="font-medium text-[#2c1612] text-sm">{employee.firstName}</span>
                         </div>
                       </td>
                       {days.map(day => {
@@ -753,7 +761,7 @@ const EmployeeScheduler = () => {
                                     ))}
                                   </div>
                               ) : (
-                                  <span className="text-gray-400 text-xs">OFF</span>
+                                  <span className="text-[#2c1612]/35 text-xs">OFF</span>
                               )}
                             </td>
                         );
@@ -770,9 +778,13 @@ const EmployeeScheduler = () => {
               </table>
             </div>
           </div>
+          <footer className="text-[#2c1612] text-center py-4 mt-6">
+            <h2 className="text-sm font-medium">© Cherish Farmer 2026</h2>
+          </footer>
+
         </div>
 
-        {selectedEmployee && <EmployeeProfile employee={selectedEmployee} />}
+        {selectedEmployee && <EmployeeProfile employee={selectedEmployee}/>}
       </div>
   );
 };
