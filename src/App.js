@@ -641,6 +641,14 @@ const EmployeeScheduler = () => {
                   <Bell size={18}/>
                   <span className="text-sm font-medium">Updated {lastUpdated?.toLocaleDateString()}</span>
                 </div>
+                <div
+                    className="flex items-center gap-2 bg-purple-50 text-purple-700 px-4 py-2 rounded-xl border border-purple-100">
+                  <a href="https://docs.google.com/forms/d/e/1FAIpQLSdPtBVD3frylj98omBXRuDOFCstH_XfnhrzyT_AjGnDpo0arQ/viewform?usp=sharing&ouid=11590243698813203477" target="_blank"
+                     className="font-medium text-sm">Update Availability</a>
+                  <span>|</span>
+                  <a href="https://docs.google.com/forms/d/e/1FAIpQLSdDUj3SzmvxOpO_JqJA4fQJo2TOT4Vt926O_WecVfKN4X745g/viewform?usp=sharing&ouid=115902436988132034775" target="_blank" className="font-medium text-sm">Request
+                    Time Off</a>
+                </div>
               </div>
             </div>
 
@@ -652,7 +660,7 @@ const EmployeeScheduler = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100">
+            <div className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar size={20}/>
                   <span className="font-semibold text-sm">Pay Period Ends</span>
