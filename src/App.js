@@ -157,7 +157,7 @@ const EmployeeScheduler = () => {
   const loadContactsFromSheet = async () => {
     const API_KEY = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
     const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-    const CONTACTS_TAB = 'Contacts'; // Name of your contacts tab
+    const CONTACTS_TAB = 'Contacts/Availability'; // Name of your contacts tab
 
     try {
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(CONTACTS_TAB)}!A1:D100?key=${API_KEY}`;
