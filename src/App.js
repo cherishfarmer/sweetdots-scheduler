@@ -660,7 +660,7 @@ const EmployeeScheduler = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100">
+              <div className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar size={20}/>
                   <span className="font-semibold text-sm">Pay Period Ends</span>
