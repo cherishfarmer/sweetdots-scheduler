@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, DollarSign, Bell, X, User, Loader, RefreshCw, ChevronLeft, ChevronRight, Phone, Mail, Lock } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Bell, X, User, Loader, RefreshCw, ChevronLeft, ChevronRight, Phone, Mail } from 'lucide-react';
 
 const EmployeeScheduler = () => {
   const [employees, setEmployees] = useState([]);
